@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { commit, randomSalt, type MeshConfig, type YRoom } from "@baditaflorin/mesh-common";
+import {
+  commit,
+  randomSalt,
+  usePerPeerValue,
+  type MeshConfig,
+  type YRoom,
+} from "@baditaflorin/mesh-common";
 
 type Props = { room: YRoom | null; config: MeshConfig };
 
@@ -60,6 +66,12 @@ function Body({ room, config }: { room: YRoom; config: MeshConfig }) {
   const saltRef = useRef<string>(randomSalt());
   const hashRef = useRef<string>("");
 
+  const presenceMap = usePerPeerValue<Presence>(room, "presence", {
+    faceVisible: false,
+    faceSince: 0,
+    name: "",
+  });
+
   useEffect(() => {
     if (name) localStorage.setItem(NAME_KEY(config.storagePrefix), name);
   }, [name, config.storagePrefix]);
@@ -71,13 +83,10 @@ function Body({ room, config }: { room: YRoom; config: MeshConfig }) {
   }, []);
 
   useEffect(() => {
-    const yPresence = room.doc.getMap<Presence>("presence");
     const yMeets = room.doc.getMap<MeetToken>("meets");
     const onChange = () => rerender((n) => n + 1);
-    yPresence.observe(onChange);
     yMeets.observe(onChange);
     return () => {
-      yPresence.unobserve(onChange);
       yMeets.unobserve(onChange);
     };
   }, [room]);
@@ -125,7 +134,7 @@ function Body({ room, config }: { room: YRoom; config: MeshConfig }) {
               consecutiveOn = 0;
               setFaceSince(0);
             }
-            room.doc.getMap<Presence>("presence").set(room.peerId, {
+            presenceMap.setMy({
               faceVisible,
               faceSince: faceVisible ? Date.now() - (consecutiveOn - 1) * 200 : 0,
               name: myName,
@@ -146,17 +155,17 @@ function Body({ room, config }: { room: YRoom; config: MeshConfig }) {
       streamRef.current = null;
       if (timerRef.current !== null) clearTimeout(timerRef.current);
       timerRef.current = null;
-      room.doc.getMap<Presence>("presence").delete(room.peerId);
+      presenceMap.clearMy();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [armed, hasFaceDetector, name, room]);
 
   useEffect(() => {
     if (!armed) return;
     const myFaceOn = faceSince > 0 && Date.now() - faceSince >= MUTUAL_HOLD_MS;
     if (!myFaceOn) return;
-    const yPresence = room.doc.getMap<Presence>("presence");
     const yMeets = room.doc.getMap<MeetToken>("meets");
-    yPresence.forEach((p, peerId) => {
+    presenceMap.entries.forEach(([peerId, p]) => {
       if (peerId === room.peerId) return;
       if (!p.faceVisible) return;
       if (p.faceSince === 0) return;
@@ -165,11 +174,12 @@ function Body({ room, config }: { room: YRoom; config: MeshConfig }) {
       if (yMeets.has(pair)) return;
       yMeets.set(pair, { pair, ts: Date.now(), hash: hashRef.current });
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [faceSince, armed, room]);
 
-  const presence: Array<{ id: string; p: Presence }> = [];
-  room.doc.getMap<Presence>("presence").forEach((p, id) => presence.push({ id, p }));
-  presence.sort((a, b) => a.id.localeCompare(b.id));
+  const presence: Array<{ id: string; p: Presence }> = presenceMap.entries
+    .map(([id, p]) => ({ id, p }))
+    .sort((a, b) => a.id.localeCompare(b.id));
 
   const meets: MeetToken[] = [];
   room.doc.getMap<MeetToken>("meets").forEach((m) => meets.push(m));
