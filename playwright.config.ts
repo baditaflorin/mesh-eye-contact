@@ -29,5 +29,18 @@ export default defineConfig({
     reuseExistingServer: !process.env["CI"],
     timeout: 60_000,
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        // Feed a synthetic camera so getUserMedia() resolves headless. The
+        // app falls into manual mode (no FaceDetector in Chromium) → camera
+        // on === face on, which is exactly what the mutual-hold mint needs.
+        launchOptions: {
+          args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"],
+        },
+      },
+    },
+  ],
 });

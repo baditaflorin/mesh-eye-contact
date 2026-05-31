@@ -1,7 +1,7 @@
 # mesh-eye-contact
 
 [![pages](https://img.shields.io/badge/live-baditaflorin.github.io%2Fmesh-eye-contact-eb4d4b)](https://baditaflorin.github.io/mesh-eye-contact/)
-[![version](https://img.shields.io/badge/version-0.1.0-blue)](https://github.com/baditaflorin/mesh-eye-contact/blob/main/package.json)
+[![version](https://img.shields.io/badge/version-0.1.1-blue)](https://github.com/baditaflorin/mesh-eye-contact/blob/main/package.json)
 [![license](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 
 > Two strangers held eye contact for N seconds — mutual face-detect mints an ephemeral 'we met' token
